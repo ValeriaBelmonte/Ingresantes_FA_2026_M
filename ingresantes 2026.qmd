@@ -1,0 +1,173 @@
+---
+title: "ingresantes 2026"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+
+```
+
+```{r}
+rm(list = ls())
+```
+
+```{r}
+library(readxl)
+datos <- read_excel("datos/Respuestas.xlsx", 
+    col_types = c("numeric", "numeric", "text", 
+        "text", "text", "numeric", "text", 
+        "text", "text", "text", "text", "numeric", 
+        "text", "text", "text", "text", "text", 
+        "text", "text", "text", "text", "text", 
+        "text", "text", "text", "text", "text", 
+        "text", "text", "text", "text", "text", 
+        "text", "text", "text", "text", "text", 
+        "text", "text", "text", "text", "text", 
+        "text", "text", "text", "text", "text", 
+        "text", "text", "text", "text", "text", 
+        "text", "text", "text"))
+
+```
+
+Variables
+
+```{r}
+names(datos)
+```
+
+```{r}
+str(datos)
+
+```
+
+```{r}
+summary(datos)
+```
+
+
+
+
+
+```{r}
+datos %>%
+  filter(DNI %in% DNI[duplicated(DNI)])
+```
+
+```{r}
+datos_dup <- datos %>%
+  filter(DNI %in% DNI[duplicated(DNI)]) %>%
+  arrange(DNI)
+```
+```{r}
+datos_dup %>% arrange(DNI)
+```
+
+```{r}
+datos1 <- datos %>%
+  filter(!estudiante %in% c(228, 47, 9,122,20,109,24))
+```
+
+```{r}
+nrow(datos)
+nrow(datos1)
+```
+
+```{r}
+table(datos1$trabaja)
+```
+
+
+
+###########
+
+
+```{r}
+datos1 <- datos1 %>%
+  mutate(across(
+    c(tiene_beca, pueblos_originarios, repitio),
+    ~case_when(
+      . %in% c("si", "sí") ~ "si",
+      . %in% c("no") ~ "no",
+      TRUE ~ NA_character_
+    )
+  ))
+```
+
+```{r}
+datos1 <- datos1 %>%
+  mutate(genero = case_when(
+    genero %in% c("f", "femenino") ~ "Femenino",
+    genero %in% c("m", "masculino") ~ "Masculino",
+    TRUE ~ NA_character_
+  ))
+```
+
+```{r}
+datos1 <- datos1 %>%
+  mutate(estado_civil = case_when(
+    estado_civil %in% c("soltero", "soltera") ~ "Soltero/a",
+    estado_civil %in% c("casado", "casada") ~ "Casado/a",
+    TRUE ~ estado_civil
+  ))
+```
+
+
+
+```{r}
+datos1 <- datos1 %>%
+  mutate(across(where(is.character), as.factor))
+```
+
+
+
+```{r}
+tabla_prop <- function(x){
+  round(prop.table(table(x)) * 100,1)
+}
+
+```
+
+
+```{r}
+#RECODIFICO LAS CARRERAS 
+
+datos1 <- datos1 %>%
+  mutate(carrera = case_when(
+    carrera == "TUAA - Licenciatura en Administración de Negocios Agropecuarios" ~ "TUAA-LANA",
+    
+    carrera == "TUAA - Licenciatura en Administración de Negocios Agropecuarios, TGyTA" ~ "TUAA-LANA, TGyTA",
+    
+    carrera == "Ingeniería Agronómica, TUAA - Licenciatura en Administración de Negocios Agropecuarios" ~ 
+      "IA, TUAA-LANA",
+    carrera == "Ingeniería Agronómica, TUAA-LANA" ~ 
+      "IA,TUAA-LANA",
+    carrera == "Ingeniería Agronómica" ~ 
+      "IA",
+    TRUE ~ carrera
+  ))
+```
+
+```{r}
+unique(datos1$carrera)
+```
+
+
+```{r}
+
+table(datos1$carrera)
+tabla_prop(datos1$carrera)
+```
+
+```{r}
+vars_cat <- c("carrera", "genero", "estado_civil", 
+               "trabaja", "provincia",
+              "pueblos_originarios", 
+              "padres_estudios_superiores",
+              "adeuda_materias", "OV",
+              "hermanos_estud_sup")
+
+lapply(datos1[vars_cat], tabla_prop)
+```
+
