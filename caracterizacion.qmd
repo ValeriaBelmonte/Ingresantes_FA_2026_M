@@ -1,0 +1,142 @@
+---
+title: "Caracterización"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+rm(list=ls())
+```
+
+## Cargo la base datos2
+
+```{r}
+library(readxl)
+datos2 <- read_excel("datos/datos2.xlsx")
+
+```
+
+```{r}
+nrow(datos2)
+```
+
+```{r}
+# trasformo a factor aquellos atributos que son caracteres
+datos2<- datos2 %>%
+  mutate(across(where(is.character), as.factor))
+``` 
+
+```{r}
+#funciones para acelerar porcentajes
+tabla_prop <- function(x){
+  round(prop.table(table(x)) * 100,1)
+}
+
+```
+
+
+
+```{r}
+vars_cat <- c("carrera", "genero", "estado_civil", 
+               "trabaja", "provincia",
+              "pueblos_originarios", 
+              "padres_estudios_superiores",
+              "adeuda_materias", "OV",
+              "hermanos_estud_sup")
+
+lapply(datos2[vars_cat], tabla_prop)
+```
+
+```{r}
+#Acomodo la varible personas a cargo
+library(dplyr)
+library(stringr)
+
+datos2 <- datos2 %>%
+  mutate(personas_cargo = str_to_lower(personas_cargo),
+         personas_cargo_cod = case_when(
+           
+           # 👉 SI (personas a cargo)
+           str_detect(personas_cargo, "si|hijo|hijos|hija|hijas|niño|niños|niña|niñas|padre|padres|madre|madres|1 nene y por nacer una bebé|hermana|1|2") ~ "si",
+           
+           # 👉 NO
+           str_detect(personas_cargo, "^no$|^no\\s|\\sno$|nada|0|solo|no, no tengo") ~ "no",
+           
+           # 👉 NR (vacíos o NA)
+           is.na(personas_cargo) | personas_cargo == "" ~ "NR",
+           
+           # 👉 lo que no sabés, lo deja como está
+           TRUE ~ personas_cargo
+         ))
+```
+
+```{r}
+table(datos2$provincia)
+```
+
+```{r}
+library(dplyr)
+library(stringr)
+library(stringi)
+
+datos2<- datos2 %>%
+  mutate(
+    # opcional: solo saco acentos (muy recomendable)
+    PROVINCIA_clean = stri_trans_general(provincia, "Latin-ASCII"),
+    
+    PROVINCIA_cod = case_when(
+      
+      # 👉 Buenos Aires (incluye CABA)
+      str_detect(PROVINCIA_clean, regex("buenos aires|ciudad autonoma", ignore_case = TRUE)) ~ "Buenos Aires",
+      
+      # 👉 La Pampa (aunque venga combinada)
+      str_detect(PROVINCIA_clean, regex("la pampa", ignore_case = TRUE)) ~ "La Pampa",
+      
+      # 👉 resto
+      TRUE ~ "Otras"
+    )
+  )
+
+datos2$PROVINCIA_clean<-NULL
+```
+
+## Selecciono solo para la caracterizacion  IA, TUAA y LANA 
+
+```{r}
+datos3 <- datos2 %>% 
+  filter(!carrera %in% c("TGyTA"))
+```
+
+```{r}
+t(table(datos2$carrera))
+```
+
+
+```{r}
+
+table (datos2$genero)
+```
+
+
+
+
+##caracterización de las respuestas de la encuesta
+
+
+
+```{r}
+unique(datos2$carrera)
+```
+
+```{r}
+sexo<-table(datos2$genero)
+sexo_df <- as.data.frame(sexo)
+colnames(sexo_df) <- c("Genero", "Frecuencia")
+# Agregar porcentaje
+sexo_df$Porcentaje <- round(100 * sexo_df$Frecuencia / sum(sexo_df$Frecuencia), 1)
+sexo_df
+```
