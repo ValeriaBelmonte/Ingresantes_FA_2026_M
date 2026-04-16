@@ -28,7 +28,7 @@ nrow(datos2)
 # trasformo a factor aquellos atributos que son caracteres
 datos2<- datos2 %>%
   mutate(across(where(is.character), as.factor))
-``` 
+```
 
 ```{r}
 #funciones para acelerar porcentajes
@@ -37,8 +37,6 @@ tabla_prop <- function(x){
 }
 
 ```
-
-
 
 ```{r}
 vars_cat <- c("carrera", "genero", "estado_civil", 
@@ -104,39 +102,168 @@ datos2<- datos2 %>%
 datos2$PROVINCIA_clean<-NULL
 ```
 
-## Selecciono solo para la caracterizacion  IA, TUAA y LANA 
 
-```{r}
-datos3 <- datos2 %>% 
-  filter(!carrera %in% c("TGyTA"))
-```
 
 ```{r}
 t(table(datos2$carrera))
 ```
+para no tener problema voy a pasar los de  a IA
 
 
 ```{r}
+library(dplyr)
 
-table (datos2$genero)
-```
-
-
-
-
-##caracterización de las respuestas de la encuesta
-
-
-
-```{r}
-unique(datos2$carrera)
+datos2 <- datos2 %>%
+  mutate(carrera = recode(carrera,
+                          "IA, TUAA-LANA" = "IA"))
 ```
 
 ```{r}
-sexo<-table(datos2$genero)
-sexo_df <- as.data.frame(sexo)
-colnames(sexo_df) <- c("Genero", "Frecuencia")
-# Agregar porcentaje
-sexo_df$Porcentaje <- round(100 * sexo_df$Frecuencia / sum(sexo_df$Frecuencia), 1)
-sexo_df
+genero<-table (datos2$carrera,datos2$genero)
+chi_genero<-chisq.test(genero)
+chi_genero$p.valuechi_genero$residuals
+100*prop.table(genero)
 ```
+### CONCLUSION GENERO 
+
+
+Se encontró una asociación estadísticamente significativa entre la carrera y el género (χ², p < 0.001).
+El análisis de los residuos estandarizados mostró que la carrera de Ingeniería Agronómica presenta una sobrerrepresentación de estudiantes masculinos y una subrepresentación de femeninos respecto a lo esperado.
+En cambio, la carrera TUAA-LANA presenta una leve tendencia opuesta, aunque sin diferencias estadísticamente significativas.
+La carrera TGyTA no evidenció desviaciones relevantes.
+
+## Edad
+
+#### Recategorizo la edad 
+
+```{r recategorizo edad, echo=TRUE, message=FALSE, warning=FALSE}
+datos2 <- datos2%>%
+  mutate(
+    edad_rec = case_when(
+      edad %in% c("17", "18","19") ~ "menos de 20",
+      edad %in% c("20", "21","22","23","24") ~ "20-24",
+      edad %in% c("25", "26","27","28","29") ~ "25-29",
+      edad %in% c("30", "31","32","33","34") ~ "30-34",
+      edad %in% c("35", "36","37","38","39") ~ "35-39",
+      edad %in% c("40", "41","42","43","44") ~ "40-44",
+        TRUE ~ "45 o más"
+    )
+  )
+```
+
+```{r}
+edad_ing_26 <- datos2 %>%
+  group_by(carrera,edad_rec ) %>%
+  summarise(cantidad = n()) %>%
+  mutate(porcentaje = round((cantidad / sum(cantidad)) * 100))
+
+edad_ing_26
+```
+
+## Origen provincia
+
+```{r}
+table(datos2$provincia)
+```
+```{r}
+library(dplyr)
+
+datos2 <- datos2 %>% 
+  mutate(provincia2 = case_when(
+    provincia == "Formosa, La Pampa" ~ "Formosa",
+    provincia == "Jujuy, La Pampa" ~ "Jujuy",
+    provincia == "Ciudad Autónoma de Buenos Aires" ~ "Buenos Aires",
+    provincia == "Buenos Aires, La Pampa" ~ "Buenos Aires",
+    TRUE ~ provincia
+  ))
+```
+```{r}
+table(datos2$provincia2)
+```
+
+
+```{r}
+library(dplyr)
+
+datos2 <- datos2 %>% 
+  mutate(provincia_rec = case_when(
+    
+    provincia2 == "Buenos Aires" ~ "Buenos Aires",
+    provincia2 == "La Pampa" ~ "La Pampa",
+    
+    #provincia2 %in% c("Córdoba", "Neuquén", "Río Negro", 
+     #                 "San Luis", "Mendoza") ~ "Otras limítrofes",
+    
+    TRUE ~ "Otras"
+  ))
+```
+```{r}
+procedencia<-table (datos2$carrera,datos2$provincia_rec)
+procedencia
+chi_procedencia<-chisq.test(procedencia)
+paste ("valores esperados")
+chi_procedencia$expected
+paste( "valor p")
+chi_procedencia$p.value
+paste("residuos")
+chi_procedencia$residuals
+paste("porcentaje")
+round(100*prop.table(procedencia,1),1)
+```
+
+## estado civil
+
+```{r}
+estado_civil<-table (datos2$carrera,datos2$estado_civil)
+estado_civil
+chi_estado_civil<-chisq.test(estado_civil)
+paste ("valores esperados")
+chi_estado_civil$expected
+paste( "valor p")
+chi_estado_civil$p.value
+paste("residuos")
+chi_estado_civil$residuals
+paste("porcentaje")
+round(100*prop.table(estado_civil,1),1)
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+t_estado_civil <- data.frame(
+  carrera = c("IA", "TGyTA", "TUAA-LANA"),
+  `Casada/o- en pareja` = c(6.9, 17.9, 21.5),
+  `Separada/o-divorciada/o` = c(0.8, 2.6, 2.0),
+  `Soltera/o` = c(92.3, 79.5, 76.5)
+)
+
+t_estado_civil_long <- t_estado_civil %>%
+  pivot_longer(-carrera, 
+               names_to = "estado_civil", 
+               values_to = "porcentaje")
+ggplot(t_estado_civil_long, aes(x = carrera, y = porcentaje, fill = estado_civil)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Estado civil según carrera",
+    x = "Carrera",
+    y = "Porcentaje",
+    fill = "Estado civil"
+  ) +
+  theme_minimal()
+
+```
+
+## Situación laboral
+
+
+## horario de trabajo
+## Personas a cargo
+## Otra carrera
+## Primera opcipon si 
+## OV
+## padres estudios superiores
+## hermanos estudios superiores
+
+
