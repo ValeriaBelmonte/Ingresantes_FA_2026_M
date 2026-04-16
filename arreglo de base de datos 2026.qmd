@@ -5,6 +5,8 @@ editor: visual
 ---
 
 ```{r}
+#| message: false
+#| warning: false
 library(tidyverse)
 library(flextable)
 
@@ -79,10 +81,12 @@ A_IA<- read_excel("datos/ASPIRANTES IA 2026_ mio.xlsx",
 A_LANA<- read_excel("datos/ASPIRANTES LANA 2026_mio.xlsx", 
     sheet = "Hoja1")
 ```
+
 ```{r}
 A_TUAA<- read_excel("datos/ASPIRANTES TUAA - 2026_mio.xlsx", 
     sheet = "Hoja1")
 ```
+
 ```{r}
 paste("Cantidad de aspirantes a IA:",nrow(A_IA))
 paste("Cantidad de aspirantes a LANA:",nrow(A_LANA))
@@ -90,7 +94,7 @@ paste("Cantidad de aspirantes a TUAA:",nrow(A_TUAA))
 paste("Cantidad de aspirantes año 2026:",(nrow(A_IA)+nrow(A_LANA)+nrow(A_TUAA)))
 ```
 
-### Comparación de bases 
+### Comparación de bases
 
 ```{r}
 #| message: false
@@ -102,18 +106,12 @@ inner_join(A_LANA, A_IA, by = "DNI")
 ```{r}
 inner_join(A_LANA,A_TUAA,by="DNI")
 ```
-Explicación la TUAA es el tramo inicial de la LANA, pero se les pidió  que se anoten por separado 
 
-
-
-
-
+Explicación la TUAA es el tramo inicial de la LANA, pero se les pidió que se anoten por separado
 
 La muestra está foramda por respuestas a las encuestas solictadas
 
 ########### 
-
-
 
 ```{r}
 #RECODIFICO LAS CARRERAS 
@@ -133,8 +131,6 @@ datos1 <- datos1 %>%
   ))
 ```
 
-
-
 ```{r}
 
 table(datos1$carrera)
@@ -145,6 +141,7 @@ tabla_carrerra<-table(datos1$carrera)
 IA_TUAA_LANA<- subset(datos1, grepl("IA, TUAA-LANA", carrera), select = c( DNI))
 IA_TUAA_LANA
 ```
+
 ```{r}
 IA_TUAA_LANA
 ```
@@ -152,15 +149,16 @@ IA_TUAA_LANA
 ```{r}
 IA_TUAA_LANA$DNI %in% A_IA$DNI
 ```
-48554577				48207829   son de la IA 
+
+48554577 48207829 son de la IA
 
 ```{r}
 
 IA_TUAA_LANA$DNI %in% A_LANA$DNI
 
 ```
-46406346				47179607	 son de la LANA
 
+46406346 47179607 son de la LANA
 
 ```{r}
 
@@ -168,30 +166,94 @@ IA_TUAA_LANA$DNI %in% A_TUAA$DNI
 
 ```
 
-48554577	IA 			
-48207829  IA TUAA			
-46580447	TUAA			
-46406346	 LANA			
-47179607   LANA		
-	
-	
-	
+48554577 IA
+48207829 IA TUAA
+46580447 TUAA
+46406346 LANA
+47179607 LANA
+
 ```{r}
-datos1$carrera[datos1$DNI ==47179607	] <- "LANA" 
+datos1$carrera[datos1$DNI ==47179607	] <- "TUAA-LANA" 
 ```
 
 ```{r}
 datos1 %>% filter(DNI %in% c(48554577,48207829,46580447,46406346, 47179607)) %>%   select(carrera)
 ```
 
-Datos 2 tiene la base de datos donde se han arreglado las carreras pero falta la TGyTA
+Ahora hay que ver  esos  11 aspirantes que dicen "TUAA-LANA, TGyTA"  
+
 ```{r}
-datos2<-datos1
+TUAALANA_y_TGyTA<-datos1 %>% filter(carrera=="TUAA-LANA, TGyTA") 
+nrow(TUAALANA_y_TGyTA)
+datos1 %>% filter(carrera=="TUAA-LANA, TGyTA") %>% select(estudiante,DNI)
+```
+ver cuales de esos 11 estan en LANA
+
+```{r}
+
+library(dplyr)
+
+# En A_TUAA
+en_tuaa <- TUAALANA_y_TGyTA %>%
+  inner_join(A_TUAA %>% select(DNI), by = "DNI") %>%
+  mutate(origen = "A_TUAA")
+
+# En A_LANA
+en_lana <- TUAALANA_y_TGyTA %>%
+  inner_join(A_LANA %>% select(DNI), by = "DNI") %>%
+  mutate(origen = "A_LANA")
+
+
+coincidencias <- bind_rows(en_tuaa, en_lana)
+coincidencias %>% select(estudiante,DNI)
+```
+```{r}
+library(dplyr)
+
+# Unifico los DNI de ambas bases
+dni_otras <- bind_rows(
+  A_TUAA %>% select(DNI),
+  A_LANA %>% select(DNI)
+) %>% distinct()
+
+# Busco los que NO están
+no_coinciden <- TUAALANA_y_TGyTA %>%
+  select(estudiante,DNI) %>%
+  anti_join(dni_otras, by = "DNI")
+no_coinciden
 ```
 
-los exporto para hacer la caracterización 
+debo eliminar el estudiante 273, ahora  ek df *datos2* tiene la base de datos donde se han arreglado las carreras SIN TGyTA 
+
+```{r}
+datos2<-datos1 %>% filter(estudiante!="273")
+```
+
+Recodifcio carrera$ TUAA-LANA, TGyTA a  TUAA-LANA
+```{r}
+library(dplyr)
+
+datos2 <- datos2 %>%
+  mutate(carrera = recode(carrera,
+                          "TUAA-LANA, TGyTA" = "TUAA-LANA"))
+```
+
+```{r}
+
+table(datos2$carrera)
+
+```
+
+los exporto para hacer la caracterización
 
 ```{r}
 writexl::write_xlsx(datos2,"datos/datos2.xlsx")
 ```
-
+ Puede ser que que el estudiante 
+ 
+```{r}
+eliminado<-datos1 %>% filter(estudiante==273) %>% select(estudiante, DNI, nombre)
+paste("el estudiante",eliminado, "fue eliminado de la base pues no tenia la certeza que fuera de TGyTA")
+```
+ 
+ 
